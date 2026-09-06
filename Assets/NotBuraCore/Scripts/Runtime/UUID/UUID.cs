@@ -12,6 +12,7 @@ namespace NotBura.Core
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static UUID FromCharSpan(ReadOnlySpan<char> span)
         {
+            // TODO: エンディアンに各対応した最速命令に置き換える
             var high =  ReadValue(span,  0 + 0,  8);
             high <<= 8 * 2;
             high |=     ReadValue(span,  8 + 1,  4);
@@ -21,7 +22,6 @@ namespace NotBura.Core
             var low =   ReadValue(span, 16 + 3,  4);
             low <<= 8 * 6;
             low |=      ReadValue(span, 20 + 4, 12);
-
             return new(high, low);
 
             static ulong ReadValue(ReadOnlySpan<char> span, int offset, int length)
@@ -48,6 +48,7 @@ namespace NotBura.Core
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe string ToString(void* source)
         {
+            // TODO: エンディアンに各対応した最速命令に置き換える
             var span = (stackalloc char[8 + 1 + 4 + 1 + 4 + 1 + 4 + 1 + 12]);
 
             SetValue(span,  0 + 0,  8, 0x0000_0000_FFFF_FFFF & (*(ulong*)source) >> 32);
@@ -95,6 +96,12 @@ namespace NotBura.Core
     {
         [FieldOffset(0)] [SerializeField] private ulong m_high;
         [FieldOffset(8)] [SerializeField] private ulong m_low;
+
+        public int Version
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => (int)(m_high >> 12) & 0xF;
+        }
 
         public UUID(ulong high, ulong low)
         {
