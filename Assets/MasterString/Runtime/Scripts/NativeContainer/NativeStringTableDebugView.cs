@@ -1,6 +1,6 @@
 #if UNITY_EDITOR
 using System;
-using Unity.Collections;
+using System.Text;
 using Unity.Collections.LowLevel.Unsafe;
 
 namespace NotBura.Packages
@@ -39,51 +39,38 @@ namespace NotBura.Packages
                 {
                     return null;
                 }
-
+                
                 var length = target.Length;
                 var array = new string[length];
                 if (target.IsUTF16)
                 {
                     var table = (uint*)target.m_buffer;
-                    var buffer = (byte*)((uint*)target.m_buffer + length);
+                    var container = (byte*)(table + length + 1);
 
                     var span = array.AsSpan();
-                    for (int i = 0, loop = length - 1; i < loop; ++i)
+                    for (int i = 0; i < length; ++i)
                     {
                         var offset = table[i];
-                        var size = (int)(table[i + 1] - offset) >> 1;
+                        var size = (int)((table[i + 1] - offset) >> 1);
 
-                        span[i] = new((char*)(void*)(buffer + offset), 0, size);
-                    }
-
-                    {
-                        var last = length - 1;
-                        var offset = table[last];
-                        var size = (int)((target.m_bufferSize - (length * sizeof(uint))) - offset) >> 1;
-                        span[last] = new((char*)(void*)(buffer + offset), 0, size);
+                        span[i] = new((char*)(void*)(container + offset), 0, size);
                     }
                 }
                 else
                 {
+                    var encoding = Encoding.UTF8;
+
                     var table = (uint*)target.m_buffer;
-                    var buffer = (byte*)((uint*)target.m_buffer + length);
+                    var container = (byte*)(table + length + 1);
 
                     var span = array.AsSpan();
-                    for (int i = 0, loop = length - 1; i < loop; ++i)
+                    for (int i = 0; i < length; ++i)
                     {
                         var offset = table[i];
                         var size = (int)(table[i + 1] - offset);
 
-                        span[i] = new((char*)(void*)(buffer + offset), 0, size);
+                        span[i] = encoding.GetString(container + offset, size);
                     }
-
-                    {
-                        var last = length - 1;
-                        var offset = table[last];
-                        var size = (int)((target.m_bufferSize - (length * sizeof(uint))) - offset) >> 1;
-                        span[last] = new((char*)(void*)(buffer + offset), 0, size);
-                    }
-
                 }
 
                 return array;

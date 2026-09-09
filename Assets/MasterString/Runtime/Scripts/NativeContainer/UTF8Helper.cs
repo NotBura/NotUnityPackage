@@ -4,7 +4,7 @@ namespace NotBura.Packages
 {
     public static class UTF8Helper
     {
-        private static unsafe int UTF8CharCount(void* source, int length)
+        private static unsafe int CharCount(void* source, int length)
         {
             const ulong LENGTH_TABLE = 0x_4322_1111_1111_1111UL;
 
@@ -30,6 +30,11 @@ namespace NotBura.Packages
 
             for (int i = 0; i < source.Length; ++i)
             {
+                if (source[i] is null)
+                {
+                    continue;
+                }
+
                 fixed (char* pointer = source[i])
                 {
                     for (int j = 0; j < source[i].Length; ++j)
@@ -56,19 +61,6 @@ namespace NotBura.Packages
                         ++j;
                     }
                 }
-            }
-
-            return result;
-        }
-
-        public static uint GetByteCountTrue(string[] source)
-        {
-            var result = 0U;
-            var encoding = Encoding.UTF8;
-
-            for (int i = 0; i < source.Length; ++i)
-            {
-                result += (uint)encoding.GetByteCount(source[i]);
             }
 
             return result;

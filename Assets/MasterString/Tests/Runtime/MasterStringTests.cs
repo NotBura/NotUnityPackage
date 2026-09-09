@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using System.Collections.Generic;
 using System.Text;
+using Unity.Collections;
 using Unity.PerformanceTesting;
 using Unity.PerformanceTesting.Measurements;
 using UnityEngine;
@@ -25,16 +26,19 @@ namespace NotBura.Packages
         }
 
         [Test]
-        public void Simple()
+        public void SimpleNativeStringTest()
         {
-            var a = UTF8Helper.GetByteCount(m_texts);
-            var b = UTF8Helper.GetByteCountTrue(m_texts);
+            using var table = NativeStringTable.FromSource(m_texts, Allocator.Temp, NativeStringEncodingTypes.UTF16);
 
-            Debug.Log($"{a} {b}");
+            var sb = new StringBuilder();
 
-            Assert.AreEqual(a, b);
+            for (int i = 0; i < table.Length; ++i)
+            {
+                sb.AppendLine(table[i].ToString());
+            }
+
+            Debug.Log(sb.ToString());
         }
-
 
         [Test, Performance]
         public void SpeedByteCountTest()
@@ -56,7 +60,6 @@ namespace NotBura.Packages
 
             void Impl()
             {
-                var result = UTF8Helper.GetByteCountTrue(m_texts);
             }
         }
 
@@ -114,5 +117,4 @@ namespace NotBura.Packages
             MasterStringAPI.Dispose();
         }
     }
-
 }

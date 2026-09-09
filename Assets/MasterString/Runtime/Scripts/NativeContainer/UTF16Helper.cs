@@ -1,6 +1,5 @@
 using System;
 using System.Runtime.CompilerServices;
-using UnityEngine;
 
 namespace NotBura.Packages
 {
@@ -17,6 +16,11 @@ namespace NotBura.Packages
 
             for (int i = 0; i < source.Length; ++i)
             {
+                if (source[i] is null)
+                {
+                    continue;
+                }
+
                 result += (uint)source[i].Length;
             }
 
@@ -26,6 +30,11 @@ namespace NotBura.Packages
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe uint GetByteCount(string source)
         {
+            if (source is null)
+            {
+                return 0;
+            }
+
             return (uint)source.Length << 1;
         }
 

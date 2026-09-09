@@ -4,31 +4,20 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using static NotBura.Packages.NativeStringConstants;
 
 namespace NotBura.Packages
 {
-    public enum NativeStringEncodeTypes
-    {
-        UTF16,
-        UTF8,
-    }
-
     [NativeContainer]
     [NativeContainerIsReadOnly]
 #if UNITY_EDITOR
-    [DebuggerDisplay("Encode = {(m_state & 0x80_00_00_00) == 0 ? \"UTF16\" : \"UTF8\"} Length = {m_state & 0x7F_FF_FF_FF}")]
+    [DebuggerDisplay("Encode = {" + nameof(IsUTF16) + " ? \"UTF16\" : \"UTF8\"} Length = {" + nameof(Length) + "}")]
     [DebuggerTypeProxy(typeof(NativeStringTableDebugView))]
 #endif
     public struct NativeStringTable
-    : IDisposable
+        : IDisposable
     {
-        internal const int MASK_LENGTH = 0x7F_FF_FF_FF;
-        internal const int MASK_ENCODE = unchecked((int)0x80_00_00_00);
-
         internal int m_state;
-        internal long m_bufferSize;
-
-        [NativeDisableUnsafePtrRestriction]
         internal unsafe void* m_buffer;
 
         // NOTE: "m_AllocatorLabel"固定である必要がある
@@ -43,19 +32,13 @@ namespace NotBura.Packages
         public unsafe bool IsValid
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => m_buffer != null;
+            get => m_buffer is not null;
         }
 
         public unsafe bool IsInvalid
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => m_buffer == null;
-        }
-
-        public int Length
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => m_state & MASK_LENGTH;
+            get => m_buffer is null;
         }
 
         public bool IsUTF16
@@ -70,44 +53,48 @@ namespace NotBura.Packages
             get => m_state < 0;
         }
 
-        public unsafe NativeString this[int index]
+        public int Length
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => m_state & MASK_LENGTH;
+        }
+
+        public unsafe NativeStringView this[int index]
         {
             get
             {
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
                 AtomicSafetyHandle.CheckReadAndThrow(m_Safety);
 #endif
-                var length = Length;
+                var length = (uint)Length;
 
-                if ((uint)index >= (uint)length)
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                if ((uint)index >= length)
                 {
                     throw new IndexOutOfRangeException(nameof(index));
                 }
-
-                if (index == length - 1)
-                {
-
-                }
+#endif
 
                 var table = (uint*)m_buffer;
                 var offset = table[index];
                 var state = (int)(table[index + 1] - offset);
+                state |= m_state & MASK_ENCODE;
 
-                if (IsUTF8)
-                {
-                    state |= MASK_ENCODE;
-                }
+                var pointer = (byte*)((uint*)m_buffer + length + 1) + offset;
 
-                var pointer = (byte*)((uint*)m_buffer + length)[offset];
-
-                return new(state, pointer);
+                return new(
+                    state
+                    , pointer
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                    , m_Safety
+#endif
+                );
             }
         }
 
-        internal unsafe NativeStringTable(int state, long bufferSize, void* buffer, Allocator allocator)
+        internal unsafe NativeStringTable(int state, void* buffer, Allocator allocator)
         {
             m_state = state;
-            m_bufferSize = bufferSize;
             m_buffer = buffer;
             m_AllocatorLabel = allocator;
 #if ENABLE_UNITY_COLLECTIONS_CHECKS
@@ -151,37 +138,38 @@ namespace NotBura.Packages
                 m_AllocatorLabel = Allocator.Invalid;
             }
 
-            m_buffer = null;
+            m_buffer = null!;
         }
 
-        public unsafe static NativeStringTable FromSource(string[] source, Allocator allocator, NativeStringEncodeTypes encode = NativeStringEncodeTypes.UTF16)
+        public unsafe static NativeStringTable FromSource(string[] source, Allocator allocator, NativeStringEncodingTypes encoding)
         {
             var state = source.Length;
-            var bufferSize = (long)source.Length * sizeof(uint);
+            var bufferSize = ((long)source.Length + 1) * sizeof(uint);
 
-            if (encode == NativeStringEncodeTypes.UTF16)
+            if (encoding == NativeStringEncodingTypes.UTF16)
             {
-                var span = source.AsSpan();
-                for (int i = 0; i < span.Length; ++i)
-                {
-                    bufferSize += unchecked((uint)span[i].Length * sizeof(char));
-                }
-
+                bufferSize += UTF16Helper.GetByteCount(source);
                 var buffer = UnsafeUtility.MallocTracked(bufferSize, UnsafeUtility.AlignOf<byte>(), allocator, 0);
 
                 var byteOffset = 0U;
                 var charOffset = 0U;
-                var offsetBegin = (uint*)buffer;
-                var bufferBigin = (char*)(void*)((uint*)buffer + span.Length);
+                var offset = (uint*)buffer;
+                var container = (char*)(void*)(offset + source.Length + 1);
 
-                for (int i = 0; i < span.Length; ++i)
+                for (int i = 0; i < source.Length; ++i)
                 {
-                    var text = span[i];
+                    var text = source[i];
+                    var length = (uint)text.Length;
 
-                    var length = unchecked((uint)text.Length);
-                    var size = unchecked(length * sizeof(char));
+                    if (text is null || length is 0)
+                    {
+                        offset[i] = byteOffset;
+                        continue;
+                    }
 
-                    var lhs = bufferBigin + charOffset;
+                    var size = length << 1;
+
+                    var lhs = container + charOffset;
                     fixed (void* rhs = text)
                     {
                         UnsafeUtility.MemCpy(lhs, rhs, size);
@@ -189,26 +177,22 @@ namespace NotBura.Packages
 
                     charOffset += length;
 
-                    offsetBegin[i] = byteOffset;
+                    offset[i] = byteOffset;
                     byteOffset += size;
                 }
 
-                return new(state, bufferSize, buffer, allocator);
+                offset[source.Length] = byteOffset;
+
+                return new(state, buffer, allocator);
             }
             else
             {
                 state |= MASK_ENCODE;
 
-                var encoding = Encoding.UTF8;
-                var span = source.AsSpan();
-                for (int i = 0; i < span.Length; ++i)
-                {
-                    bufferSize += encoding.GetByteCount(span[i]);
-                }
-
+                bufferSize += UTF8Helper.GetByteCount(source);
                 var buffer = UnsafeUtility.MallocTracked(bufferSize, UnsafeUtility.AlignOf<byte>(), allocator, 0);
 
-                return new(state, bufferSize, buffer, allocator);
+                return new(state, buffer, allocator);
             }
         }
     }
