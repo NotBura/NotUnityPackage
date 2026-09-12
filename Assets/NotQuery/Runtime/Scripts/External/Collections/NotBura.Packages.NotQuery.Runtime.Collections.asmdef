@@ -1,0 +1,19 @@
+{
+    "name": "NotBura.Packages.NotQuery.Runtime.Collections",
+    "rootNamespace": "NotBura.Packages",
+    "references": [
+        "GUID:5b8acb698be3a88448773a5f93b802e9",
+        "GUID:e0cd26848372d4e5c891c569017e11f1"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "System.Runtime.CompilerServices.Unsafe.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}
