@@ -19,7 +19,7 @@ namespace NotBura.Core.Tests
             var _fromValue = new UUID(HIGH, LOW);
 
             var _lhs = _fromSpan.ToString().AsSpan();
-            var _rhs = _fromSpan.ToString().AsSpan();
+            var _rhs = _fromValue.ToString().AsSpan();
 
             Assert.IsTrue(_lhs.SequenceEqual(_rhs));
         }
@@ -54,7 +54,7 @@ namespace NotBura.Core.Tests
         {
             measurement
                 .WarmupCount(50)
-                .IterationsPerMeasurement(10000)
+                .IterationsPerMeasurement(50000)
                 .MeasurementCount(100)
                 .GC()
                 .Run();

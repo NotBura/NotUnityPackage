@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
@@ -10,14 +11,36 @@ namespace NotBura.Core
     [DebuggerDisplay("{ToString()}")]
 #endif
     [Serializable]
-    [StructLayout(LayoutKind.Sequential, Size = 16)]
+    [StructLayout(LayoutKind.Explicit)]
     public struct UUIDV4
         : IUUID
         , IComparable<UUIDV4>
         , IEquatable<UUIDV4>
+        , IFormattable
     {
-        [SerializeField] private ulong m_high;
-        [SerializeField] private ulong m_low;
+        [FieldOffset(0), SerializeField] private ulong m_high;
+        [FieldOffset(8), SerializeField] private ulong m_low;
+
+        public int Version
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => (int)(m_high >> 12) & 0xF;
+        }
+
+        public int Variant
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => (int)(m_low >> (12 + (16 * 3)));
+        }
+
+        // NOTE: Unsafe.SkipInitで確保したエリアに書き込む方が早い(はず)
+        public UUIDV4(ulong high, ulong low)
+        {
+            m_high = high;
+            m_low = low;
+        }
+
+        #region public method
 
         public unsafe ref UUID ToUUID()
         {
@@ -26,6 +49,8 @@ namespace NotBura.Core
                 return ref *(UUID*)ptr;
             }
         }
+
+        #endregion public method
 
         #region interface method
 
@@ -45,11 +70,19 @@ namespace NotBura.Core
             }
         }
 
+        public unsafe string ToString(string format, IFormatProvider formatProvider)
+        {
+            fixed (void* pointer = &this)
+            {
+                return IUUID.ToStringLower(pointer);
+            }
+        }
+
         #endregion interface method
 
         #region override method
 
-        [Obsolete("Call boxing method.")]
+        [Obsolete("Called boxing method.")]
 #pragma warning disable CS0809
         public override bool Equals(object obj)
 #pragma warning restore CS0809

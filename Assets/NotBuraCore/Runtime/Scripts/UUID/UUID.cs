@@ -18,8 +18,8 @@ namespace NotBura.Core
         , IComparable<UUID>
         , IFormattable
     {
-        [FieldOffset(0)] [SerializeField] private ulong m_high;
-        [FieldOffset(8)] [SerializeField] private ulong m_low;
+        [FieldOffset(0), SerializeField] private ulong m_high;
+        [FieldOffset(8), SerializeField] private ulong m_low;
 
         public int Version
         {
@@ -27,17 +27,26 @@ namespace NotBura.Core
             get => (int)(m_high >> 12) & 0xF;
         }
 
+        public int Variant
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => (int)(m_low >> (12 + (16 * 3)));
+        }
+
+        // NOTE: Unsafe.SkipInitで確保したエリアに書き込む方が早い(はず)
         public UUID(ulong high, ulong low)
         {
             m_high = high;
             m_low = low;
         }
 
+        #region interface method
+
         public unsafe bool Equals(UUID other)
         {
             fixed (void* pointer = &this)
             {
-                return UnsafeUtility.MemCmp(pointer, &other, 16) == 0;
+                return UnsafeUtility.MemCmp(pointer, &other, sizeof(UUID)) == 0;
             }
         }
 
@@ -45,11 +54,23 @@ namespace NotBura.Core
         {
             fixed (void* pointer = &this)
             {
-                return UnsafeUtility.MemCmp(pointer, &other, 16);
+                return UnsafeUtility.MemCmp(pointer, &other, sizeof(UUID));
             }
         }
 
-        [Obsolete("Call boxing method.")]
+        public unsafe string ToString(string format, IFormatProvider formatProvider)
+        {
+            fixed (void* pointer = &this)
+            {
+                return IUUID.ToStringLower(pointer);
+            }
+        }
+
+        #endregion interface method
+
+        #region override method
+
+        [Obsolete("Called boxing method.")]
 #pragma warning disable CS0809
         public override bool Equals(object obj)
 #pragma warning restore CS0809
@@ -70,13 +91,7 @@ namespace NotBura.Core
             }
         }
 
-        public unsafe string ToString(string format, IFormatProvider formatProvider)
-        {
-            fixed (void* pointer = &this)
-            {
-                return IUUID.ToStringLower(pointer);
-            }
-        }
+        #endregion override method
 
         public static UUID FromCharSpan(ReadOnlySpan<char> span)
         {
