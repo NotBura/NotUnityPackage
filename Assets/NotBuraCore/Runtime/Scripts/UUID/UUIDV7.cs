@@ -10,26 +10,26 @@ namespace NotBura.Core
     [DebuggerDisplay("{ToString()}")]
 #endif
     [Serializable]
-    [StructLayout(LayoutKind.Sequential, Size = 16)]
-    public struct UUIDV4
+    [StructLayout(LayoutKind.Explicit)]
+    public struct UUIDV7
         : IUUID
-        , IComparable<UUIDV4>
-        , IEquatable<UUIDV4>
+        , IEquatable<UUIDV7>
+        , IComparable<UUIDV7>
     {
-        [SerializeField] private ulong m_high;
-        [SerializeField] private ulong m_low;
+        [FieldOffset(0)] [SerializeField] private ulong m_high;
+        [FieldOffset(8)] [SerializeField] private ulong m_low;
 
         public unsafe ref UUID ToUUID()
         {
-            fixed (void* ptr = &this)
+            fixed (void* pointer = &this)
             {
-                return ref *(UUID*)ptr;
+                return ref *(UUID*)pointer;
             }
         }
 
         #region interface method
 
-        public unsafe bool Equals(UUIDV4 other)
+        public unsafe bool Equals(UUIDV7 other)
         {
             fixed (void* pointer = &this)
             {
@@ -37,7 +37,7 @@ namespace NotBura.Core
             }
         }
 
-        public unsafe int CompareTo(UUIDV4 other)
+        public unsafe int CompareTo(UUIDV7 other)
         {
             fixed (void* pointer = &this)
             {
@@ -54,7 +54,7 @@ namespace NotBura.Core
         public override bool Equals(object obj)
 #pragma warning restore CS0809
         {
-            return obj is UUIDV4 cast && Equals(cast);
+            return obj is UUIDV7 cast && Equals(cast);
         }
 
         public override int GetHashCode()
@@ -66,7 +66,7 @@ namespace NotBura.Core
         {
             fixed (void* pointer = &this)
             {
-                return IUUID.ToString(pointer);
+                return IUUID.ToStringLower(pointer);
             }
         }
 
@@ -74,20 +74,15 @@ namespace NotBura.Core
 
         #region implicit operator
 
-        public static implicit operator UUID(UUIDV4 other)
+        public static implicit operator UUID(UUIDV7 other)
         {
             // NOTE: unsafeコンテキストで直接ポインタ操作しても速度差がほぼなかった
-            //unsafe
-            //{
-            //    return *(UUID*)((void*)&other);
-            //}
-
-            return UnsafeUtility.As<UUIDV4, UUID>(ref other);
+            return UnsafeUtility.As<UUIDV7, UUID>(ref other);
         }
 
-        public static implicit operator UUIDV4(UUID other)
+        public static implicit operator UUIDV7(UUID other)
         {
-            return UnsafeUtility.As<UUID, UUIDV4>(ref other);
+            return UnsafeUtility.As<UUID, UUIDV7>(ref other);
         }
 
         #endregion implicit operator
