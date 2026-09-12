@@ -2,77 +2,14 @@ using NUnit.Framework;
 using System.Collections.Generic;
 using System.Text;
 using Unity.Collections;
-using Unity.PerformanceTesting;
-using Unity.PerformanceTesting.Measurements;
 using UnityEngine;
 
 namespace NotBura.Packages
 {
     internal sealed class MasterStringTests
     {
-        private string[] m_texts;
-
-        [OneTimeSetUp]
-        public void SetUp()
-        {
-            m_texts = new string[]
-            {
-                "こんにちはこんばんはおはようございます",
-                "今は朝の十時なので夕飯のランチを楽しみたいと思いませんか？",
-                "長野県の千駄ヶ谷駅から徒歩120kmほど進んだところにバス停がありました",
-                "今日はエレベストからソリで下ってきたのですが、思ったよりも早く着きましたね",
-                "what's up bro, you lock so bones.",
-            };
-        }
-
         [Test]
-        public void SimpleNativeStringTest()
-        {
-            using var table = NativeStringTable.FromSource(m_texts, Allocator.Temp, NativeStringEncodingTypes.UTF16);
-
-            var sb = new StringBuilder();
-
-            for (int i = 0; i < table.Length; ++i)
-            {
-                sb.AppendLine(table[i].ToString());
-            }
-
-            Debug.Log(sb.ToString());
-        }
-
-        [Test, Performance]
-        public void SpeedByteCountTest()
-        {
-            var measurement = Measure.Method(Impl);
-            Run(measurement);
-
-            void Impl()
-            {
-                var result = UTF8Helper.GetByteCount(m_texts);
-            }
-        }
-
-        [Test, Performance]
-        public void SpeedByteCountNewTest()
-        {
-            var measurement = Measure.Method(Impl);
-            Run(measurement);
-
-            void Impl()
-            {
-            }
-        }
-
-        private void Run(MethodMeasurement measurement)
-        {
-            measurement
-                .WarmupCount(50)
-                .IterationsPerMeasurement(5000)
-                .MeasurementCount(50)
-                .Run();
-        }
-
-        public void MenuItem()
+        public void SimpleProviderTest()
         {
             var _table = new List<MasterStringModel.Element>()
             {

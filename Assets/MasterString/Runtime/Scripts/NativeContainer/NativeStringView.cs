@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Unity.Collections;
@@ -60,7 +59,20 @@ namespace NotBura.Packages
                 return new((char*)m_buffer, 0, BytesCount >> 1);
             }
 
-            return Encoding.UTF8.GetString((byte*)m_buffer, BytesCount);
+            var _pointer = (byte*)m_buffer;
+            var _count = BytesCount;
+            var _length = (int)UTF8Helper.CharCount(_pointer, _count);
+
+            // NOTE: String.FastAllocateStringを正攻法で使えないので現状new string
+            // String.Createでも良いが余分な確保を完全に削減するには使えない
+            var _result = new string('\0', _length);
+
+            fixed (char* _destination = _result)
+            {
+                Encoding.UTF8.GetChars(_pointer, _count, _destination, _length);
+            }
+
+            return _result;
         }
 
         public unsafe NativeString ToNativeString(Allocator allocator)

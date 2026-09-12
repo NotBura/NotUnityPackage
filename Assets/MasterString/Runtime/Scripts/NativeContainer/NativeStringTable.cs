@@ -143,56 +143,81 @@ namespace NotBura.Packages
 
         public unsafe static NativeStringTable FromSource(string[] source, Allocator allocator, NativeStringEncodingTypes encoding)
         {
-            var state = source.Length;
-            var bufferSize = ((long)source.Length + 1) * sizeof(uint);
+            var _state = source.Length;
+            var _bufferSize = ((long)source.Length + 1) * sizeof(uint);
 
             if (encoding == NativeStringEncodingTypes.UTF16)
             {
-                bufferSize += UTF16Helper.GetByteCount(source);
-                var buffer = UnsafeUtility.MallocTracked(bufferSize, UnsafeUtility.AlignOf<byte>(), allocator, 0);
+                _bufferSize += UTF16Helper.ByteCount(source);
+                var _buffer = UnsafeUtility.MallocTracked(_bufferSize, UnsafeUtility.AlignOf<byte>(), allocator, 0);
 
-                var byteOffset = 0U;
-                var charOffset = 0U;
-                var offset = (uint*)buffer;
-                var container = (char*)(void*)(offset + source.Length + 1);
+                var _caret = 0U;
+                var _offset = (uint*)_buffer;
+                var _container = (byte*)(void*)(_offset + source.Length + 1);
 
                 for (int i = 0; i < source.Length; ++i)
                 {
-                    var text = source[i];
-                    var length = (uint)text.Length;
+                    var _text = source[i];
+                    var _length = (uint)_text.Length;
 
-                    if (text is null || length is 0)
+                    if (_text is null || _length is 0)
                     {
-                        offset[i] = byteOffset;
+                        _offset[i] = _caret;
                         continue;
                     }
 
-                    var size = length << 1;
+                    var _count = _length << 1;
 
-                    var lhs = container + charOffset;
-                    fixed (void* rhs = text)
+                    var _lhs = _container + _caret;
+                    fixed (void* _rhs = _text)
                     {
-                        UnsafeUtility.MemCpy(lhs, rhs, size);
+                        UnsafeUtility.MemCpy(_lhs, _rhs, _count);
                     }
 
-                    charOffset += length;
-
-                    offset[i] = byteOffset;
-                    byteOffset += size;
+                    _offset[i] = _caret;
+                    _caret += _count;
                 }
 
-                offset[source.Length] = byteOffset;
+                _offset[source.Length] = _caret;
 
-                return new(state, buffer, allocator);
+                return new(_state, _buffer, allocator);
             }
             else
             {
-                state |= MASK_ENCODE;
+                _state |= MASK_ENCODE;
 
-                bufferSize += UTF8Helper.GetByteCount(source);
-                var buffer = UnsafeUtility.MallocTracked(bufferSize, UnsafeUtility.AlignOf<byte>(), allocator, 0);
+                _bufferSize += UTF8Helper.ByteCount(source);
+                var _buffer = UnsafeUtility.MallocTracked(_bufferSize, UnsafeUtility.AlignOf<byte>(), allocator, 0);
 
-                return new(state, buffer, allocator);
+                var _caret = 0U;
+                var _offset = (uint*)_buffer;
+                var _container = (byte*)(void*)(_offset + source.Length + 1);
+
+                var _encoder = Encoding.UTF8;
+
+                for (int i = 0; i < source.Length; ++i)
+                {
+                    var _text = source[i];
+                    if (_text is null || _text.Length is 0)
+                    {
+                        continue;
+                    }
+
+                    var _count = UTF8Helper.ByteCount(_text);
+
+                    var _rhs = _container + (_caret);
+                    fixed (char* _lhs = _text)
+                    {
+                        _encoder.GetBytes(_lhs, _text.Length, _rhs, (int)_count);
+                    }
+
+                    _offset[i] = _caret;
+                    _caret += _count;
+                }
+
+                _offset[source.Length] = _caret;
+
+                return new(_state, _buffer, allocator);
             }
         }
     }
