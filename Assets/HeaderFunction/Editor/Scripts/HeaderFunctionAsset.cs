@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace NotBura.Packages
 {
-    public class HeaderFunctionAsset
+    public sealed class HeaderFunctionAsset
         : ScriptableObject
     {
         [SerializeReference] private HeaderFunctionDrawer[] m_drawers;

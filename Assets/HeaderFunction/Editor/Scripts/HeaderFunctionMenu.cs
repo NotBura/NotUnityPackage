@@ -6,7 +6,7 @@ using Object = UnityEngine.Object;
 
 namespace NotBura.Packages
 {
-    public class HeaderFunctionMenu
+    public sealed class HeaderFunctionMenu
     {
         private List<HeaderFunctionMenuData> m_elements;
 

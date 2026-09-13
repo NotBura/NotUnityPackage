@@ -5,7 +5,7 @@ using UnityEngine;
 namespace NotBura.Packages
 {
     [Serializable]
-    public class HeaderFunctionDrawer<T>
+    public sealed class HeaderFunctionDrawer<T>
         : HeaderFunctionDrawer
     {
         [SerializeField] private T m_value;

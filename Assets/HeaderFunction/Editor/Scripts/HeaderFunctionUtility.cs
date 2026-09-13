@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 
 namespace NotBura.Packages
 {
-    public class HeaderFunctionUtility
+    public static class HeaderFunctionUtility
     {
         public static void SetResultHandler(Action<object> handler)
         {

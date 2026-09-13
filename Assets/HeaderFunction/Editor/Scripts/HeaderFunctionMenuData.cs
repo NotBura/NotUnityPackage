@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace NotBura.Packages
 {
-    public class HeaderFunctionMenuData
+    public sealed class HeaderFunctionMenuData
     {
         private string m_name;
         private MethodInfo m_methodInfo;

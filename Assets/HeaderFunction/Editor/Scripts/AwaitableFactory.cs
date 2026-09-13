@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace NotBura.Packages
 {
-    public class AwaitableFactory
+    public sealed class AwaitableFactory
     {
         private const string NAME_OF_GET_AWAITER    = "GetAwaiter";
         private const string NAME_OF_IS_COMPLETED   = "IsCompleted";
